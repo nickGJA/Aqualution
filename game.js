@@ -4,8 +4,8 @@ class Shape {
         this.x = x;
         this.y = y;
         this.size = 30;
-        this.normalSpeed = 2;
-        this.fastSpeed = 8;
+        this.normalSpeed = 1.35;
+        this.fastSpeed = 5.4;
         this.rotation = 0;
         this.rotationSpeed = 0.02;
         this.isMatched = false;
@@ -476,49 +476,28 @@ class Wheel {
             Math.pow(shape.y - wheelCenter.y, 2)
         );
 
-        // Debug logging for collision detection
-        console.log(`Checking collision for shape: ${shape.type}`);
-        console.log(`Distance from wheel center: ${distance}`);
-        console.log(`Collision zone: ${this.radius - shape.size} to ${this.radius + shape.size}`);
-
         // Check if shape is near the wheel's edge
         if (distance < this.radius + shape.size && distance > this.radius - shape.size) {
-            console.log(`Shape is near wheel edge`);
-            
-            // Fix type once for comparison
             const fallingShapeType = String(shape.type).trim();
             
-            // Check each hole for a match - ONLY THE SAME TYPE
+            // Check each hole for a match
             for (let i = 0; i < this.holes.length; i++) {
-                // Examine hole type for debugging
                 const holeType = String(this.holes[i].type).trim();
-                console.log(`Examining hole ${i}: type=${holeType}, falling shape type=${fallingShapeType}`);
                 
                 // Only check unfilled holes WITH MATCHING TYPE
                 if (!this.filledHoles.has(i) && fallingShapeType === holeType) {
-                    // Calculate the hole's position on the wheel, accounting for rotation
                     const holeX = this.x + Math.cos(this.holes[i].angle + this.rotation) * this.radius * 0.85;
                     const holeY = this.y + Math.sin(this.holes[i].angle + this.rotation) * this.radius * 0.85;
                     
-                    // Calculate distance between falling shape and hole
                     const holeDistance = Math.sqrt(
                         Math.pow(shape.x - holeX, 2) + 
                         Math.pow(shape.y - holeY, 2)
                     );
                     
-                    console.log(`MATCHING Hole ${i}: type=${holeType}, shape type=${fallingShapeType}, distance=${holeDistance}`);
-                    
-                    // If shapes are close enough - type match already confirmed
-                    if (holeDistance < shape.size * 1.5) {
-                        console.log(`MATCH FOUND! Shape: ${fallingShapeType}, Hole: ${holeType}`);
-                        
-                        // Mark the hole as filled
+                    // Reduce collision distance from 1.5 to 1.2 times shape size
+                    if (holeDistance < shape.size * 1.2) {
                         this.filledHoles.add(i);
-                        
-                        // Start the matching animation
                         shape.startMatch(holeX, holeY, this.holes[i].angle + this.rotation);
-                        
-                        // Return true to indicate a successful match
                         return true;
                     }
                 }
@@ -541,16 +520,27 @@ class Game {
         // Load background image
         this.backgroundImage = new Image();
         this.backgroundImage.src = 'Background.png';
+        this.backgroundOffset = 0;
+        this.backgroundWaveAmplitude = 3;
+        this.backgroundWaveSpeed = 0.02;
+        
+        // Initialize clouds
+        this.clouds = [];
+        this.initClouds();
+        
+        // Initialize fish
+        this.fish = [];
+        this.initFish();
         
         this.wheel = new Wheel(this.canvas.width / 2, this.canvas.height - 150);
         this.shapes = [];
         this.gameOver = false;
         this.score = 0;
+        this.level = 1;
         this.touchStartX = 0;
         this.lastSpawnTime = 0;
         this.spawnInterval = 2000; // 2 seconds between shapes
         this.currentShape = null;
-        this.shapeSpeed = 2; // Constant speed
         this.isSpeedBoosted = false;
 
         // Load sound effects
@@ -626,8 +616,8 @@ class Game {
             e.preventDefault();
             if (!this.gameOver) {
                 const touchY = e.touches[0].clientY;
-                // Only boost speed if touching above the wheel
-                if (touchY < this.wheel.y - this.wheel.radius) {
+                // Only boost speed if touching in top half of screen
+                if (touchY < this.canvas.height / 2) {
                     this.isSpeedBoosted = true;
                     if (this.currentShape) {
                         this.currentShape.setSpeed(true);
@@ -670,13 +660,17 @@ class Game {
             sound.currentTime = 0;
         });
 
+        // Reset game state
         this.shapes = [];
         this.wheel = new Wheel(this.canvas.width / 2, this.canvas.height - 150);
         this.gameOver = false;
         this.score = 0;
+        this.level = 1;
         this.lastSpawnTime = 0;
         this.currentShape = null;
+        this.isSpeedBoosted = false;
         document.getElementById('gameOverlay').style.display = 'none';
+        document.getElementById('gameMessage').textContent = '';
         this.spawnShape();
         this.gameLoop();
     }
@@ -697,6 +691,8 @@ class Game {
         // If all holes are filled, game is over
         if (availableHoles.length === 0) {
             this.gameOver = true;
+            document.getElementById('gameMessage').textContent = 'You Win!';
+            document.getElementById('gameOverlay').style.display = 'flex';
             return;
         }
         
@@ -704,20 +700,168 @@ class Game {
         const randomHole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
         const type = String(randomHole.type).trim();
         
-        // Log for debugging
-        console.log(`Spawning shape of type: ${type}`);
-        
         const x = this.canvas.width / 2;
         const y = 0;
         
         this.currentShape = new Shape(type, x, y);
+        // Apply 35% faster speed
+        this.currentShape.normalSpeed = 1.35;
+        this.currentShape.fastSpeed = 5.4;
         this.currentShape.setSpeed(this.isSpeedBoosted);
+    }
+
+    initClouds() {
+        const numClouds = 5;
+        for (let i = 0; i < numClouds; i++) {
+            this.createCloud();
+        }
+    }
+
+    createCloud() {
+        const direction = Math.random() < 0.5 ? -1 : 1;
+        const cloud = {
+            x: direction === 1 ? -200 : this.canvas.width + 200,
+            y: Math.random() * 100,
+            width: 100 + Math.random() * 100,
+            height: 50 + Math.random() * 30,
+            speed: (1 + Math.random()) * direction,
+            opacity: 0.4 + Math.random() * 0.3
+        };
+        this.clouds.push(cloud);
+    }
+
+    initFish() {
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance every second
+                this.createFish();
+            }
+        }, 1000);
+    }
+
+    createFish() {
+        const direction = Math.random() < 0.5 ? -1 : 1;
+        const fish = {
+            x: direction === 1 ? -50 : this.canvas.width + 50,
+            y: this.canvas.height - 100 - Math.random() * 200,
+            size: 20 + Math.random() * 30,
+            speed: (2 + Math.random() * 2) * direction,
+            jumpHeight: 50 + Math.random() * 50,
+            jumpProgress: 0,
+            color: `hsl(${Math.random() * 360}, 70%, 50%)`
+        };
+        this.fish.push(fish);
+        this.createSplash(fish.x, fish.y);
+    }
+
+    createSplash(x, y) {
+        const numParticles = 10;
+        for (let i = 0; i < numParticles; i++) {
+            const angle = (Math.PI / 4) + (Math.random() * Math.PI / 2);
+            const speed = 2 + Math.random() * 3;
+            const particle = {
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: -Math.sin(angle) * speed,
+                life: 1,
+                size: 2 + Math.random() * 3
+            };
+            this.splashParticles.push(particle);
+        }
+    }
+
+    drawCloud(cloud) {
+        this.ctx.save();
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${cloud.opacity})`;
+        this.ctx.beginPath();
+        
+        // Draw multiple circles for fluffy appearance
+        const numCircles = 5;
+        const baseRadius = cloud.height / 2;
+        for (let i = 0; i < numCircles; i++) {
+            const x = cloud.x + (i * (cloud.width / 4));
+            const y = cloud.y + Math.sin(i * 0.5) * 10;
+            const radius = baseRadius + Math.sin(i * 0.7) * 10;
+            this.ctx.moveTo(x + radius, y);
+            this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        }
+        
+        this.ctx.fill();
+        this.ctx.restore();
+    }
+
+    drawFish(fish) {
+        this.ctx.save();
+        this.ctx.translate(fish.x, fish.y - Math.sin(fish.jumpProgress * Math.PI) * fish.jumpHeight);
+        this.ctx.scale(fish.speed < 0 ? -1 : 1, 1);
+        
+        // Draw fish body
+        this.ctx.fillStyle = fish.color;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 0);
+        this.ctx.quadraticCurveTo(fish.size/2, -fish.size/4, fish.size, 0);
+        this.ctx.quadraticCurveTo(fish.size/2, fish.size/4, 0, 0);
+        this.ctx.fill();
+        
+        // Draw tail
+        this.ctx.beginPath();
+        this.ctx.moveTo(-fish.size/4, 0);
+        this.ctx.lineTo(-fish.size/2, -fish.size/3);
+        this.ctx.lineTo(-fish.size/2, fish.size/3);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Draw eye
+        this.ctx.fillStyle = 'white';
+        this.ctx.beginPath();
+        this.ctx.arc(fish.size/2, -fish.size/6, fish.size/8, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = 'black';
+        this.ctx.beginPath();
+        this.ctx.arc(fish.size/2, -fish.size/6, fish.size/16, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.restore();
+    }
+
+    drawScreenFade() {
+        const gradient = this.ctx.createRadialGradient(
+            this.canvas.width/2, this.canvas.height/2, Math.min(this.canvas.width, this.canvas.height)/3,
+            this.canvas.width/2, this.canvas.height/2, Math.max(this.canvas.width, this.canvas.height)/1.5
+        );
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0.5)');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     update() {
         if (this.gameOver) return;
 
         const currentTime = Date.now();
+
+        // Update background wave
+        this.backgroundOffset += this.backgroundWaveSpeed;
+
+        // Update clouds
+        this.clouds.forEach((cloud, index) => {
+            cloud.x += cloud.speed;
+            if ((cloud.speed > 0 && cloud.x > this.canvas.width + 300) || 
+                (cloud.speed < 0 && cloud.x < -300)) {
+                this.clouds.splice(index, 1);
+                this.createCloud();
+            }
+        });
+
+        // Update fish
+        this.fish.forEach((fish, index) => {
+            fish.x += fish.speed;
+            fish.jumpProgress += 0.02;
+            if (fish.jumpProgress >= 1) {
+                this.fish.splice(index, 1);
+            }
+        });
 
         // Update current shape
         if (this.currentShape) {
@@ -755,10 +899,10 @@ class Game {
 
             // Check if shape is below the screen
             if (this.currentShape && this.currentShape.y > this.canvas.height) {
-                this.currentShape = null;
-                this.lastSpawnTime = currentTime;
-                // Spawn new shape immediately
-                this.spawnShape();
+                this.gameOver = true;
+                document.getElementById('gameMessage').textContent = 'Game Over!';
+                document.getElementById('gameOverlay').style.display = 'flex';
+                return;
             }
         }
 
@@ -771,6 +915,7 @@ class Game {
         if (this.wheel.isComplete()) {
             this.gameOver = true;
             document.getElementById('gameMessage').textContent = 'You Win!';
+            document.getElementById('gameOverlay').style.display = 'flex';
         }
     }
 
@@ -778,13 +923,30 @@ class Game {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw background image
+        // Draw background with wave effect
         if (this.backgroundImage.complete) {
-            this.ctx.drawImage(this.backgroundImage, 0, 0, this.canvas.width, this.canvas.height);
+            const waveOffset = Math.sin(this.backgroundOffset) * this.backgroundWaveAmplitude;
+            const scale = 1.05; // Scale up by 5% to prevent black edges
+            const scaledWidth = this.canvas.width * scale;
+            const scaledHeight = this.canvas.height * scale;
+            const offsetX = (scaledWidth - this.canvas.width) / 2;
+            const offsetY = (scaledHeight - this.canvas.height) / 2;
+            
+            this.ctx.drawImage(
+                this.backgroundImage,
+                -offsetX + waveOffset, -offsetY + waveOffset,
+                scaledWidth, scaledHeight
+            );
         }
 
-        // Draw wheel first (behind shapes)
+        // Draw clouds
+        this.clouds.forEach(cloud => this.drawCloud(cloud));
+
+        // Draw wheel
         this.wheel.draw(this.ctx);
+
+        // Draw fish
+        this.fish.forEach(fish => this.drawFish(fish));
 
         // Draw current shape
         if (this.currentShape) {
@@ -956,47 +1118,11 @@ class Game {
                     
                     // Only draw connection and distance for MATCHING types
                     if (currentShapeType === holeType) {
-                        // Calculate distance
+                        // Calculate distance for collision detection only
                         const dist = Math.sqrt(
                             Math.pow(this.currentShape.x - holeX, 2) + 
                             Math.pow(this.currentShape.y - holeY, 2)
                         );
-                        
-                        // Draw line
-                        this.ctx.save();
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(this.currentShape.x, this.currentShape.y);
-                        this.ctx.lineTo(holeX, holeY);
-                        
-                        // Color based on distance only (type match already confirmed)
-                        const isCloseEnough = dist < this.currentShape.size * 1.5;
-                        
-                        if (isCloseEnough) {
-                            this.ctx.strokeStyle = 'lime';
-                            this.ctx.lineWidth = 3;
-                        } else {
-                            this.ctx.strokeStyle = 'yellow';
-                            this.ctx.lineWidth = 1;
-                        }
-                        
-                        this.ctx.stroke();
-                        
-                        // Add text for debugging
-                        const midX = (this.currentShape.x + holeX) / 2;
-                        const midY = (this.currentShape.y + holeY) / 2;
-                        
-                        this.ctx.font = '12px Arial';
-                        this.ctx.textAlign = 'center';
-                        this.ctx.textBaseline = 'middle';
-                        this.ctx.fillStyle = 'white';
-                        this.ctx.strokeStyle = 'black';
-                        this.ctx.lineWidth = 2;
-                        
-                        const text = `${Math.round(dist)}px | ${holeType}`;
-                        this.ctx.strokeText(text, midX, midY);
-                        this.ctx.fillText(text, midX, midY);
-                        
-                        this.ctx.restore();
                     }
                 }
             });
@@ -1007,8 +1133,18 @@ class Game {
         this.ctx.font = 'bold 24px Arial';
         this.ctx.strokeStyle = 'black';
         this.ctx.lineWidth = 3;
+        this.ctx.textAlign = 'left';
         this.ctx.strokeText(`Score: ${this.score}`, 20, 40);
         this.ctx.fillText(`Score: ${this.score}`, 20, 40);
+
+        // Draw level counter on the right side
+        this.ctx.textAlign = 'right';
+        this.ctx.strokeText(`Level ${this.level}`, this.canvas.width - 20, 40);
+        this.ctx.fillText(`Level ${this.level}`, this.canvas.width - 20, 40);
+        this.ctx.textAlign = 'left';
+
+        // Draw screen fade
+        this.drawScreenFade();
 
         if (this.gameOver) {
             document.getElementById('gameOverlay').style.display = 'flex';
