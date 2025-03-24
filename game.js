@@ -143,9 +143,32 @@ class Game {
         this.gameOver = false;
         this.score = 0;
         this.touchStartX = 0;
+        this.lastSpawnTime = 0;
+        this.spawnInterval = 2000; // 2 seconds between shapes
+        this.currentShape = null;
 
         this.setupEventListeners();
+        this.lockOrientation();
         this.startGame();
+    }
+
+    lockOrientation() {
+        // Try to lock to portrait mode
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('portrait').catch(() => {
+                // If orientation lock fails, show a message
+                console.log('Orientation lock not supported');
+            });
+        }
+
+        // Add orientation change listener
+        window.addEventListener('orientationchange', () => {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('portrait').catch(() => {
+                    console.log('Orientation lock not supported');
+                });
+            }
+        });
     }
 
     setupEventListeners() {
@@ -185,42 +208,49 @@ class Game {
         this.wheel = new Wheel(this.canvas.width / 2, this.canvas.height - 150);
         this.gameOver = false;
         this.score = 0;
+        this.lastSpawnTime = 0;
+        this.currentShape = null;
         document.getElementById('gameOverlay').style.display = 'none';
         this.spawnShape();
         this.gameLoop();
     }
 
     spawnShape() {
+        if (this.gameOver) return;
+        
         const types = ['circle', 'square', 'triangle'];
         const type = types[Math.floor(Math.random() * types.length)];
-        const x = Math.random() * (this.canvas.width - 100) + 50;
-        this.shapes.push(new Shape(type, x, 0));
+        // Always spawn shape in the center of the screen
+        const x = this.canvas.width / 2;
+        const y = 0;
+        this.currentShape = new Shape(type, x, y);
     }
 
     update() {
         if (this.gameOver) return;
 
-        // Update shapes
-        this.shapes = this.shapes.filter(shape => {
-            shape.update();
+        const currentTime = Date.now();
+
+        // Update current shape
+        if (this.currentShape) {
+            this.currentShape.update();
             
             // Check collision with wheel
-            if (this.wheel.checkCollision(shape)) {
+            if (this.wheel.checkCollision(this.currentShape)) {
                 this.score++;
-                return false;
+                this.currentShape = null;
+                this.lastSpawnTime = currentTime;
             }
 
             // Check if shape is below the wheel
-            if (shape.y > this.canvas.height) {
+            if (this.currentShape.y > this.canvas.height) {
                 this.gameOver = true;
-                return false;
+                this.currentShape = null;
             }
+        }
 
-            return true;
-        });
-
-        // Spawn new shapes
-        if (Math.random() < 0.02) {
+        // Spawn new shape after interval
+        if (!this.currentShape && currentTime - this.lastSpawnTime >= this.spawnInterval) {
             this.spawnShape();
         }
 
@@ -235,8 +265,10 @@ class Game {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw shapes
-        this.shapes.forEach(shape => shape.draw(this.ctx));
+        // Draw current shape
+        if (this.currentShape) {
+            this.currentShape.draw(this.ctx);
+        }
 
         // Draw wheel
         this.wheel.draw(this.ctx);
