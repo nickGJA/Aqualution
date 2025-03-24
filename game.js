@@ -74,6 +74,7 @@ class Shape {
         
         // Draw filled shape
         this.drawShape(ctx, this.size);
+        
         ctx.restore();
     }
 
@@ -97,12 +98,23 @@ class Shape {
                 break;
             case 'star':
                 ctx.beginPath();
+                // Draw 5-pointed star with inner and outer points
                 for (let i = 0; i < 5; i++) {
-                    const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-                    const x = Math.cos(angle) * size / 2;
-                    const y = Math.sin(angle) * size / 2;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
+                    const outerAngle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                    const innerAngle = outerAngle + Math.PI / 5;
+                    
+                    // Outer point
+                    const outerX = Math.cos(outerAngle) * (size / 2);
+                    const outerY = Math.sin(outerAngle) * (size / 2);
+                    
+                    // Inner point
+                    const innerX = Math.cos(innerAngle) * (size * 0.2);
+                    const innerY = Math.sin(innerAngle) * (size * 0.2);
+                    
+                    if (i === 0) ctx.moveTo(outerX, outerY);
+                    else ctx.lineTo(outerX, outerY);
+                    
+                    ctx.lineTo(innerX, innerY);
                 }
                 ctx.closePath();
                 ctx.stroke();
@@ -129,22 +141,30 @@ class Shape {
                 ctx.stroke();
                 break;
             case 'cross':
-                ctx.strokeRect(-size / 6, -size / 2, size / 3, size);
-                ctx.strokeRect(-size / 2, -size / 6, size, size / 3);
+                ctx.beginPath();
+                const armWidth = size * 0.2;
+                ctx.moveTo(-armWidth, -size / 2);
+                ctx.lineTo(armWidth, -size / 2);
+                ctx.lineTo(armWidth, -armWidth);
+                ctx.lineTo(size / 2, -armWidth);
+                ctx.lineTo(size / 2, armWidth);
+                ctx.lineTo(armWidth, armWidth);
+                ctx.lineTo(armWidth, size / 2);
+                ctx.lineTo(-armWidth, size / 2);
+                ctx.lineTo(-armWidth, armWidth);
+                ctx.lineTo(-size / 2, armWidth);
+                ctx.lineTo(-size / 2, -armWidth);
+                ctx.lineTo(-armWidth, -armWidth);
+                ctx.closePath();
+                ctx.stroke();
                 break;
             case 'heart':
                 ctx.beginPath();
-                ctx.moveTo(0, size / 4);
-                ctx.bezierCurveTo(
-                    -size / 4, -size / 4,
-                    -size / 2, -size / 4,
-                    0, -size / 2
-                );
-                ctx.bezierCurveTo(
-                    size / 2, -size / 4,
-                    size / 4, -size / 4,
-                    0, size / 4
-                );
+                const topWidth = size * 0.25;
+                const curveHeight = size * 0.4;
+                ctx.moveTo(0, size * 0.35);
+                ctx.bezierCurveTo(-size / 2, 0, -size / 2, -curveHeight, 0, -size / 2);
+                ctx.bezierCurveTo(size / 2, -curveHeight, size / 2, 0, 0, size * 0.35);
                 ctx.stroke();
                 break;
             case 'moon':
@@ -152,7 +172,7 @@ class Shape {
                 ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.arc(size / 4, 0, size / 3, 0, Math.PI * 2);
+                ctx.arc(size / 5, 0, size / 3, 0, Math.PI * 2);
                 ctx.stroke();
                 break;
             case 'spiral':
@@ -193,12 +213,23 @@ class Shape {
                 break;
             case 'star':
                 ctx.beginPath();
+                // Draw 5-pointed star with inner and outer points
                 for (let i = 0; i < 5; i++) {
-                    const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-                    const x = Math.cos(angle) * size / 2;
-                    const y = Math.sin(angle) * size / 2;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
+                    const outerAngle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                    const innerAngle = outerAngle + Math.PI / 5;
+                    
+                    // Outer point
+                    const outerX = Math.cos(outerAngle) * (size / 2);
+                    const outerY = Math.sin(outerAngle) * (size / 2);
+                    
+                    // Inner point
+                    const innerX = Math.cos(innerAngle) * (size * 0.2);
+                    const innerY = Math.sin(innerAngle) * (size * 0.2);
+                    
+                    if (i === 0) ctx.moveTo(outerX, outerY);
+                    else ctx.lineTo(outerX, outerY);
+                    
+                    ctx.lineTo(innerX, innerY);
                 }
                 ctx.closePath();
                 ctx.fillStyle = this.color;
@@ -228,23 +259,31 @@ class Shape {
                 ctx.fill();
                 break;
             case 'cross':
+                ctx.beginPath();
+                const armWidth = size * 0.2;
+                ctx.moveTo(-armWidth, -size / 2);
+                ctx.lineTo(armWidth, -size / 2);
+                ctx.lineTo(armWidth, -armWidth);
+                ctx.lineTo(size / 2, -armWidth);
+                ctx.lineTo(size / 2, armWidth);
+                ctx.lineTo(armWidth, armWidth);
+                ctx.lineTo(armWidth, size / 2);
+                ctx.lineTo(-armWidth, size / 2);
+                ctx.lineTo(-armWidth, armWidth);
+                ctx.lineTo(-size / 2, armWidth);
+                ctx.lineTo(-size / 2, -armWidth);
+                ctx.lineTo(-armWidth, -armWidth);
+                ctx.closePath();
                 ctx.fillStyle = this.color;
-                ctx.fillRect(-size / 6, -size / 2, size / 3, size);
-                ctx.fillRect(-size / 2, -size / 6, size, size / 3);
+                ctx.fill();
                 break;
             case 'heart':
                 ctx.beginPath();
-                ctx.moveTo(0, size / 4);
-                ctx.bezierCurveTo(
-                    -size / 4, -size / 4,
-                    -size / 2, -size / 4,
-                    0, -size / 2
-                );
-                ctx.bezierCurveTo(
-                    size / 2, -size / 4,
-                    size / 4, -size / 4,
-                    0, size / 4
-                );
+                const topWidth = size * 0.25;
+                const curveHeight = size * 0.4;
+                ctx.moveTo(0, size * 0.35);
+                ctx.bezierCurveTo(-size / 2, 0, -size / 2, -curveHeight, 0, -size / 2);
+                ctx.bezierCurveTo(size / 2, -curveHeight, size / 2, 0, 0, size * 0.35);
                 ctx.fillStyle = this.color;
                 ctx.fill();
                 break;
@@ -254,7 +293,7 @@ class Shape {
                 ctx.fillStyle = this.color;
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(size / 4, 0, size / 3, 0, Math.PI * 2);
+                ctx.arc(size / 5, 0, size / 3, 0, Math.PI * 2);
                 ctx.fillStyle = '#1a1a2e';
                 ctx.fill();
                 break;
@@ -268,8 +307,6 @@ class Shape {
                     if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 }
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 3;
                 ctx.stroke();
                 break;
         }
@@ -313,20 +350,26 @@ class Wheel {
         this.radius = Math.min(window.innerWidth, window.innerHeight) * 0.255;
         this.rotation = 0;
         this.holes = [
-            { type: 'circle', angle: 0 },
-            { type: 'star', angle: Math.PI * 2 / 8 },
-            { type: 'triangle', angle: Math.PI * 4 / 8 },
-            { type: 'hexagon', angle: Math.PI * 6 / 8 },
-            { type: 'moon', angle: Math.PI * 8 / 8 },
+            { type: 'triangle', angle: 0 },
+            { type: 'hexagon', angle: Math.PI * 2 / 8 },
+            { type: 'square', angle: Math.PI * 4 / 8 },
+            { type: 'star', angle: Math.PI * 6 / 8 },
+            { type: 'heart', angle: Math.PI * 8 / 8 },
             { type: 'cross', angle: Math.PI * 10 / 8 },
-            { type: 'square', angle: Math.PI * 12 / 8 },
-            { type: 'heart', angle: Math.PI * 14 / 8 }
+            { type: 'circle', angle: Math.PI * 12 / 8 },
+            { type: 'moon', angle: Math.PI * 14 / 8 }
         ];
         this.filledHoles = new Set();
         this.rotationTrail = [];
         this.maxTrailLength = 5;
         this.splashParticles = [];
         this.maxSplashParticles = 20;
+        
+        // Map each hole type to its console logged name for debugging
+        this.holeTypeMap = {};
+        this.holes.forEach(hole => {
+            this.holeTypeMap[hole.type] = hole.type;
+        });
         
         // Load wheel image
         this.image = new Image();
@@ -419,91 +462,6 @@ class Wheel {
                 ctx.rotate(hole.angle);
                 ctx.translate(0, -this.radius * 0.85);
                 ctx.rotate(-hole.angle - this.rotation);
-
-                // Draw hole shadow for depth
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
-
-                // Draw hole with gradient for depth
-                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 30);
-                gradient.addColorStop(0, '#2a2a2a');
-                gradient.addColorStop(1, '#1a1a1a');
-
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                switch (hole.type) {
-                    case 'circle':
-                        ctx.arc(0, 0, 30, 0, Math.PI * 2);
-                        break;
-                    case 'square':
-                        ctx.rect(-30, -30, 60, 60);
-                        break;
-                    case 'triangle':
-                        ctx.moveTo(0, -30);
-                        ctx.lineTo(30, 30);
-                        ctx.lineTo(-30, 30);
-                        ctx.closePath();
-                        break;
-                    case 'star':
-                        for (let i = 0; i < 5; i++) {
-                            const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-                            const x = Math.cos(angle) * 30;
-                            const y = Math.sin(angle) * 30;
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        break;
-                    case 'diamond':
-                        ctx.moveTo(0, -30);
-                        ctx.lineTo(30, 0);
-                        ctx.lineTo(0, 30);
-                        ctx.lineTo(-30, 0);
-                        ctx.closePath();
-                        break;
-                    case 'hexagon':
-                        for (let i = 0; i < 6; i++) {
-                            const angle = (i * 2 * Math.PI) / 6;
-                            const x = Math.cos(angle) * 30;
-                            const y = Math.sin(angle) * 30;
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        break;
-                    case 'cross':
-                        ctx.rect(-10, -30, 20, 60);
-                        ctx.rect(-30, -10, 60, 20);
-                        break;
-                    case 'heart':
-                        ctx.moveTo(0, 8);
-                        ctx.bezierCurveTo(-15, -15, -30, -15, 0, -30);
-                        ctx.bezierCurveTo(30, -15, 15, -15, 0, 8);
-                        break;
-                    case 'moon':
-                        ctx.arc(0, 0, 30, 0, Math.PI * 2);
-                        ctx.arc(8, 0, 22, 0, Math.PI * 2);
-                        break;
-                    case 'spiral':
-                        for (let i = 0; i < 8; i++) {
-                            const angle = i * Math.PI / 4;
-                            const radius = 30 * (1 - i / 8);
-                            const x = Math.cos(angle) * radius;
-                            const y = Math.sin(angle) * radius;
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        break;
-                }
-                ctx.fill();
-
-                // Draw hole edge highlight
-                ctx.strokeStyle = '#3a3a3a';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-
                 ctx.restore();
             }
         });
@@ -518,12 +476,26 @@ class Wheel {
             Math.pow(shape.y - wheelCenter.y, 2)
         );
 
+        // Debug logging for collision detection
+        console.log(`Checking collision for shape: ${shape.type}`);
+        console.log(`Distance from wheel center: ${distance}`);
+        console.log(`Collision zone: ${this.radius - shape.size} to ${this.radius + shape.size}`);
+
         // Check if shape is near the wheel's edge
         if (distance < this.radius + shape.size && distance > this.radius - shape.size) {
-            // Check each hole for a match
+            console.log(`Shape is near wheel edge`);
+            
+            // Fix type once for comparison
+            const fallingShapeType = String(shape.type).trim();
+            
+            // Check each hole for a match - ONLY THE SAME TYPE
             for (let i = 0; i < this.holes.length; i++) {
-                // Only check unfilled holes and holes with matching shape type
-                if (!this.filledHoles.has(i) && this.holes[i].type === shape.type) {
+                // Examine hole type for debugging
+                const holeType = String(this.holes[i].type).trim();
+                console.log(`Examining hole ${i}: type=${holeType}, falling shape type=${fallingShapeType}`);
+                
+                // Only check unfilled holes WITH MATCHING TYPE
+                if (!this.filledHoles.has(i) && fallingShapeType === holeType) {
                     // Calculate the hole's position on the wheel, accounting for rotation
                     const holeX = this.x + Math.cos(this.holes[i].angle + this.rotation) * this.radius * 0.85;
                     const holeY = this.y + Math.sin(this.holes[i].angle + this.rotation) * this.radius * 0.85;
@@ -533,9 +505,13 @@ class Wheel {
                         Math.pow(shape.x - holeX, 2) + 
                         Math.pow(shape.y - holeY, 2)
                     );
-
-                    // If shapes are close enough
+                    
+                    console.log(`MATCHING Hole ${i}: type=${holeType}, shape type=${fallingShapeType}, distance=${holeDistance}`);
+                    
+                    // If shapes are close enough - type match already confirmed
                     if (holeDistance < shape.size * 1.5) {
+                        console.log(`MATCH FOUND! Shape: ${fallingShapeType}, Hole: ${holeType}`);
+                        
                         // Mark the hole as filled
                         this.filledHoles.add(i);
                         
@@ -708,10 +684,32 @@ class Game {
     spawnShape() {
         if (this.gameOver) return;
         
-        const types = ['circle', 'star', 'triangle', 'hexagon', 'moon', 'cross', 'square', 'heart'];
-        const type = types[Math.floor(Math.random() * types.length)];
+        // Get the actual types from the wheel holes for strict matching
+        const availableHoles = [];
+        
+        // Only consider unfilled holes
+        this.wheel.holes.forEach((hole, index) => {
+            if (!this.wheel.filledHoles.has(index)) {
+                availableHoles.push(hole);
+            }
+        });
+        
+        // If all holes are filled, game is over
+        if (availableHoles.length === 0) {
+            this.gameOver = true;
+            return;
+        }
+        
+        // Select a random hole type from the available unfilled holes
+        const randomHole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+        const type = String(randomHole.type).trim();
+        
+        // Log for debugging
+        console.log(`Spawning shape of type: ${type}`);
+        
         const x = this.canvas.width / 2;
         const y = 0;
+        
         this.currentShape = new Shape(type, x, y);
         this.currentShape.setSpeed(this.isSpeedBoosted);
     }
@@ -725,8 +723,22 @@ class Game {
         if (this.currentShape) {
             this.currentShape.update();
             
+            // Store collision data for debugging
+            this.collisionDebug = {
+                checking: true,
+                shapeType: this.currentShape.type,
+                nearWheel: false,
+                closestHole: null,
+                closestType: null,
+                closestDist: Infinity,
+                matched: false
+            };
+            
             // Check collision with wheel
             if (this.wheel.checkCollision(this.currentShape)) {
+                // Update debug data
+                this.collisionDebug.matched = true;
+                
                 // Play match sound
                 this.sounds.shapeMatch.play();
                 
@@ -742,7 +754,7 @@ class Game {
             }
 
             // Check if shape is below the screen
-            if (this.currentShape.y > this.canvas.height) {
+            if (this.currentShape && this.currentShape.y > this.canvas.height) {
                 this.currentShape = null;
                 this.lastSpawnTime = currentTime;
                 // Spawn new shape immediately
@@ -777,6 +789,217 @@ class Game {
         // Draw current shape
         if (this.currentShape) {
             this.currentShape.draw(this.ctx);
+            
+            // Draw connection lines ONLY to matching holes
+            this.wheel.holes.forEach((hole, i) => {
+                if (!this.wheel.filledHoles.has(i)) {
+                    const holeType = String(hole.type).trim();
+                    const currentShapeType = String(this.currentShape.type).trim();
+                    
+                    // Calculate hole position
+                    const holeX = this.wheel.x + Math.cos(hole.angle + this.wheel.rotation) * this.wheel.radius * 0.85;
+                    const holeY = this.wheel.y + Math.sin(hole.angle + this.wheel.rotation) * this.wheel.radius * 0.85;
+                    
+                    this.ctx.save();
+                    
+                    // Draw the actual shape
+                    const shapeSize = 20;
+                    this.ctx.translate(holeX, holeY + 5);
+                    
+                    // Use the same colors as falling shapes
+                    let shapeColor;
+                    switch (holeType) {
+                        case 'circle': shapeColor = '#4CAF50'; break;
+                        case 'square': shapeColor = '#FF6B6B'; break;
+                        case 'triangle': shapeColor = '#4ECDC4'; break;
+                        case 'star': shapeColor = '#FFD700'; break;
+                        case 'hexagon': shapeColor = '#FF9800'; break;
+                        case 'cross': shapeColor = '#E91E63'; break;
+                        case 'heart': shapeColor = '#F44336'; break;
+                        case 'moon': shapeColor = '#2196F3'; break;
+                        default: shapeColor = '#4CAF50';
+                    }
+                    
+                    // Draw shape based on type
+                    switch (holeType) {
+                        case 'circle':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                this.ctx.arc(0, 0, shapeSize/2, 0, Math.PI * 2);
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.stroke();
+                            }
+                            break;
+                        case 'square':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fillRect(-shapeSize/2, -shapeSize/2, shapeSize, shapeSize);
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.strokeRect(-shapeSize/2, -shapeSize/2, shapeSize, shapeSize);
+                            }
+                            break;
+                        case 'triangle':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(0, -shapeSize/2);
+                                this.ctx.lineTo(shapeSize/2, shapeSize/2);
+                                this.ctx.lineTo(-shapeSize/2, shapeSize/2);
+                                this.ctx.closePath();
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.stroke();
+                            }
+                            break;
+                        case 'star':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                for (let i = 0; i < 5; i++) {
+                                    const outerAngle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                                    const innerAngle = outerAngle + Math.PI / 5;
+                                    
+                                    const outerX = Math.cos(outerAngle) * (shapeSize/2);
+                                    const outerY = Math.sin(outerAngle) * (shapeSize/2);
+                                    
+                                    const innerX = Math.cos(innerAngle) * (shapeSize * 0.2);
+                                    const innerY = Math.sin(innerAngle) * (shapeSize * 0.2);
+                                    
+                                    if (i === 0) this.ctx.moveTo(outerX, outerY);
+                                    else this.ctx.lineTo(outerX, outerY);
+                                    
+                                    this.ctx.lineTo(innerX, innerY);
+                                }
+                                this.ctx.closePath();
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.stroke();
+                            }
+                            break;
+                        case 'hexagon':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                for (let i = 0; i < 6; i++) {
+                                    const angle = (i * 2 * Math.PI) / 6;
+                                    const x = Math.cos(angle) * shapeSize/2;
+                                    const y = Math.sin(angle) * shapeSize/2;
+                                    if (i === 0) this.ctx.moveTo(x, y);
+                                    else this.ctx.lineTo(x, y);
+                                }
+                                this.ctx.closePath();
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.stroke();
+                            }
+                            break;
+                        case 'cross':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                const armWidth = shapeSize * 0.2;
+                                this.ctx.moveTo(-armWidth, -shapeSize/2);
+                                this.ctx.lineTo(armWidth, -shapeSize/2);
+                                this.ctx.lineTo(armWidth, -armWidth);
+                                this.ctx.lineTo(shapeSize/2, -armWidth);
+                                this.ctx.lineTo(shapeSize/2, armWidth);
+                                this.ctx.lineTo(armWidth, armWidth);
+                                this.ctx.lineTo(armWidth, shapeSize/2);
+                                this.ctx.lineTo(-armWidth, shapeSize/2);
+                                this.ctx.lineTo(-armWidth, armWidth);
+                                this.ctx.lineTo(-shapeSize/2, armWidth);
+                                this.ctx.lineTo(-shapeSize/2, -armWidth);
+                                this.ctx.lineTo(-armWidth, -armWidth);
+                                this.ctx.closePath();
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.stroke();
+                            }
+                            break;
+                        case 'heart':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                const topWidth = shapeSize * 0.25;
+                                const curveHeight = shapeSize * 0.4;
+                                this.ctx.moveTo(0, shapeSize * 0.35);
+                                this.ctx.bezierCurveTo(-shapeSize/2, 0, -shapeSize/2, -curveHeight, 0, -shapeSize/2);
+                                this.ctx.bezierCurveTo(shapeSize/2, -curveHeight, shapeSize/2, 0, 0, shapeSize * 0.35);
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.stroke();
+                            }
+                            break;
+                        case 'moon':
+                            if (!this.wheel.filledHoles.has(i)) {
+                                this.ctx.beginPath();
+                                this.ctx.arc(0, 0, shapeSize/2, 0, Math.PI * 2);
+                                this.ctx.fillStyle = shapeColor;
+                                this.ctx.fill();
+                                
+                                this.ctx.beginPath();
+                                this.ctx.arc(shapeSize/5, 0, shapeSize/3, 0, Math.PI * 2);
+                                this.ctx.fillStyle = '#1a1a2e';
+                                this.ctx.fill();
+                                
+                                this.ctx.strokeStyle = 'black';
+                                this.ctx.beginPath();
+                                this.ctx.arc(0, 0, shapeSize/2, 0, Math.PI * 2);
+                                this.ctx.stroke();
+                            }
+                            break;
+                    }
+                    
+                    this.ctx.restore();
+                    
+                    // Only draw connection and distance for MATCHING types
+                    if (currentShapeType === holeType) {
+                        // Calculate distance
+                        const dist = Math.sqrt(
+                            Math.pow(this.currentShape.x - holeX, 2) + 
+                            Math.pow(this.currentShape.y - holeY, 2)
+                        );
+                        
+                        // Draw line
+                        this.ctx.save();
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.currentShape.x, this.currentShape.y);
+                        this.ctx.lineTo(holeX, holeY);
+                        
+                        // Color based on distance only (type match already confirmed)
+                        const isCloseEnough = dist < this.currentShape.size * 1.5;
+                        
+                        if (isCloseEnough) {
+                            this.ctx.strokeStyle = 'lime';
+                            this.ctx.lineWidth = 3;
+                        } else {
+                            this.ctx.strokeStyle = 'yellow';
+                            this.ctx.lineWidth = 1;
+                        }
+                        
+                        this.ctx.stroke();
+                        
+                        // Add text for debugging
+                        const midX = (this.currentShape.x + holeX) / 2;
+                        const midY = (this.currentShape.y + holeY) / 2;
+                        
+                        this.ctx.font = '12px Arial';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillStyle = 'white';
+                        this.ctx.strokeStyle = 'black';
+                        this.ctx.lineWidth = 2;
+                        
+                        const text = `${Math.round(dist)}px | ${holeType}`;
+                        this.ctx.strokeText(text, midX, midY);
+                        this.ctx.fillText(text, midX, midY);
+                        
+                        this.ctx.restore();
+                    }
+                }
+            });
         }
 
         // Draw score with better visibility
