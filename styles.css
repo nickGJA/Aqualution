@@ -11,7 +11,7 @@ body {
     align-items: center;
     min-height: 100vh;
     background: linear-gradient(135deg, #1a1a2e, #16213e);
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Arial, sans-serif;
     overflow: hidden;
 }
 
@@ -25,14 +25,18 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
 }
 
 #gameCanvas {
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.2);
 }
 
 .game-overlay {
@@ -41,40 +45,62 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     display: none;
     justify-content: center;
     align-items: center;
-    border-radius: 10px;
+    border-radius: 20px;
     z-index: 1000;
+    backdrop-filter: blur(5px);
 }
 
 .game-message {
     text-align: center;
     color: white;
-    padding: 20px;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .game-message h2 {
     font-size: 2.5em;
     margin-bottom: 20px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 #restartButton {
-    padding: 12px 30px;
+    padding: 15px 40px;
     font-size: 1.2em;
-    background: #4CAF50;
+    background: linear-gradient(45deg, #4CAF50, #45a049);
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 25px;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: all 0.3s ease;
     -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
 }
 
 #restartButton:hover {
-    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+#restartButton:active {
+    transform: translateY(1px);
 }
 
 @media (orientation: landscape) {
@@ -94,6 +120,11 @@ body {
     .game-container {
         height: 100vh;
         max-height: none;
+        border-radius: 0;
+    }
+
+    #gameCanvas {
+        border-radius: 0;
     }
 
     .game-message h2 {

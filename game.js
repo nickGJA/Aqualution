@@ -5,19 +5,30 @@ class Shape {
         this.y = y;
         this.size = 30;
         this.speed = 2;
+        this.rotation = 0;
+        this.rotationSpeed = 0.02;
     }
 
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        // Add glow effect
+        ctx.shadowColor = '#4CAF50';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
         
         switch (this.type) {
             case 'circle':
                 ctx.beginPath();
                 ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#4CAF50';
                 ctx.fill();
                 break;
             case 'square':
+                ctx.fillStyle = '#FF6B6B';
                 ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
                 break;
             case 'triangle':
@@ -26,6 +37,7 @@ class Shape {
                 ctx.lineTo(this.size / 2, this.size / 2);
                 ctx.lineTo(-this.size / 2, this.size / 2);
                 ctx.closePath();
+                ctx.fillStyle = '#4ECDC4';
                 ctx.fill();
                 break;
         }
@@ -35,6 +47,7 @@ class Shape {
 
     update() {
         this.y += this.speed;
+        this.rotation += this.rotationSpeed;
     }
 }
 
@@ -42,7 +55,7 @@ class Wheel {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.radius = 100;
+        this.radius = Math.min(window.innerWidth, window.innerHeight) * 0.15; // Responsive radius
         this.rotation = 0;
         this.holes = [
             { type: 'circle', angle: 0 },
@@ -57,11 +70,17 @@ class Wheel {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
 
-        // Draw wheel body
+        // Draw wheel body with gradient
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius);
+        gradient.addColorStop(0, '#4a4a4a');
+        gradient.addColorStop(1, '#2a2a2a');
+
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#4a4a4a';
+        ctx.fillStyle = gradient;
         ctx.fill();
+
+        // Draw wheel border
         ctx.strokeStyle = '#666';
         ctx.lineWidth = 3;
         ctx.stroke();
@@ -73,6 +92,12 @@ class Wheel {
                 ctx.rotate(hole.angle);
                 ctx.translate(0, -this.radius * 0.7);
                 ctx.rotate(-hole.angle - this.rotation);
+
+                // Add glow effect for holes
+                ctx.shadowColor = '#4CAF50';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
 
                 ctx.beginPath();
                 switch (hole.type) {
@@ -135,9 +160,8 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = 800;
-        this.canvas.height = 600;
-
+        this.resizeCanvas();
+        
         this.wheel = new Wheel(this.canvas.width / 2, this.canvas.height - 150);
         this.shapes = [];
         this.gameOver = false;
@@ -150,6 +174,11 @@ class Game {
         this.setupEventListeners();
         this.lockOrientation();
         this.startGame();
+    }
+
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
     }
 
     lockOrientation() {
