@@ -578,6 +578,11 @@ class Game {
         this.resizeCanvas();
         this.gameLoopId = null;
         
+        // Add frame timing properties
+        this.lastFrameTime = 0;
+        this.fps = 60;
+        this.frameInterval = 1000 / this.fps; // Time between frames (16.67ms)
+        
         // Load background image
         this.backgroundImage = new Image();
         this.backgroundImage.src = 'Background.png';
@@ -923,7 +928,7 @@ class Game {
     }
 
     initPlatforms() {
-        // Add exactly 2 platforms in the top half of the screen
+        // Add exactly 6 platforms in the top half of the screen
         const screenHeight = this.canvas.height;
         const topHalfHeight = screenHeight / 2;
         
@@ -931,12 +936,25 @@ class Game {
         const minHeight = topHalfHeight * 0.3;
         const maxHeight = topHalfHeight * 0.8;
         
-        for (let i = 0; i < 2; i++) {
+        // Calculate the height step to evenly space 6 platforms
+        const heightStep = (maxHeight - minHeight) / 5;
+        
+        for (let i = 0; i < 6; i++) {
             // Position platforms at different heights within the valid range
-            const y = minHeight + (i * (maxHeight - minHeight));
-            const width = 30 + Math.random() * 20; // Narrower platforms (30-50px)
+            const y = minHeight + (i * heightStep);
+            const width = (30 + Math.random() * 20) * 1.5; // 50% wider platforms (45-75px)
             const x = Math.random() * (this.canvas.width - width);
-            const speed = 1.5 + Math.random() * 1; // Slightly slower speed
+            
+            // Set speed based on platform index
+            let speed;
+            if (i === 0 || i === 2 || i === 4) {
+                // Platforms 1, 3, and 5 have random speeds
+                speed = 1.5 + Math.random() * 2; // Random speed between 1.5 and 3.5
+            } else {
+                // Platforms 2, 4, and 6 have consistent speed
+                speed = 2.0; // Fixed speed
+            }
+            
             const direction = Math.random() < 0.5 ? -1 : 1;
             
             // Create platform with thinner height (8px)
@@ -1291,10 +1309,28 @@ class Game {
         }
     }
 
-    gameLoop() {
-        this.update();
+    gameLoop(timestamp) {
+        // Initialize lastFrameTime on first frame
+        if (!this.lastFrameTime) {
+            this.lastFrameTime = timestamp;
+            requestAnimationFrame((t) => this.gameLoop(t));
+            return;
+        }
+
+        // Calculate elapsed time since last frame
+        const elapsed = timestamp - this.lastFrameTime;
+
+        // Only update if enough time has passed
+        if (elapsed >= this.frameInterval) {
+            this.update();
+            this.lastFrameTime = timestamp;
+        }
+
+        // Always draw every frame for smooth rendering
         this.draw();
-        this.gameLoopId = requestAnimationFrame(() => this.gameLoop());
+
+        // Request next frame
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
 }
 
