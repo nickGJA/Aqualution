@@ -4,8 +4,8 @@ class Shape {
         this.x = x;
         this.y = y;
         this.size = 30;
-        this.normalSpeed = 1.35;
-        this.fastSpeed = 5.4;
+        this.normalSpeed = 0.8;
+        this.fastSpeed = 3.2;
         this.rotation = 0;
         this.rotationSpeed = 0.02;
         this.isMatched = false;
@@ -18,6 +18,14 @@ class Shape {
         this.color = this.getColorForType(type);
         this.trail = [];
         this.maxTrailLength = 30;
+        
+        // Add physics properties
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.gravity = 0.5;
+        this.friction = 0.98;
+        this.bounce = 0.7;
+        this.isOnPlatform = false;
     }
 
     getColorForType(type) {
@@ -511,11 +519,64 @@ class Wheel {
     }
 }
 
+class Platform {
+    constructor(x, y, width, height, speed, direction = 1) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.speed = speed;
+        this.direction = direction;
+    }
+
+    update() {
+        this.x += this.speed * this.direction;
+
+        // Change direction if platform reaches screen edges
+        if (this.x <= 0 || this.x + this.width >= window.innerWidth) {
+            this.direction *= -1;
+        }
+    }
+
+    draw(ctx) {
+        // Draw platform with gradient for better visibility
+        const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+        gradient.addColorStop(0, '#4a90e2');
+        gradient.addColorStop(1, '#357abd');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Draw platform border
+        ctx.strokeStyle = '#2c5a8a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
+
+    checkCollision(shape) {
+        // Check platform collision
+        if (shape.y + shape.size/2 >= this.y && 
+            shape.y - shape.size/2 <= this.y + this.height &&
+            shape.x + shape.size/2 >= this.x && 
+            shape.x - shape.size/2 <= this.x + this.width) {
+            
+            // Top collision
+            if (shape.velocityY > 0) {
+                shape.y = this.y - shape.size/2;
+                shape.velocityY = -shape.velocityY * shape.bounce;
+                shape.isOnPlatform = true;
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.resizeCanvas();
+        this.gameLoopId = null;
         
         // Load background image
         this.backgroundImage = new Image();
@@ -542,6 +603,8 @@ class Game {
         this.spawnInterval = 2000; // 2 seconds between shapes
         this.currentShape = null;
         this.isSpeedBoosted = false;
+        this.platforms = [];
+        this.initPlatforms();
 
         // Load sound effects
         this.sounds = {
@@ -660,6 +723,12 @@ class Game {
             sound.currentTime = 0;
         });
 
+        // Cancel the previous game loop if it exists
+        if (this.gameLoopId !== null) {
+            cancelAnimationFrame(this.gameLoopId);
+            this.gameLoopId = null;
+        }
+
         // Reset game state
         this.shapes = [];
         this.wheel = new Wheel(this.canvas.width / 2, this.canvas.height - 150);
@@ -669,8 +738,25 @@ class Game {
         this.lastSpawnTime = 0;
         this.currentShape = null;
         this.isSpeedBoosted = false;
+        
+        // Reset platform speeds and positions
+        this.platforms = [];
+        this.initPlatforms();
+        
+        // Reset background wave
+        this.backgroundOffset = 0;
+        
+        // Reset clouds and fish
+        this.clouds = [];
+        this.fish = [];
+        this.initClouds();
+        this.initFish();
+        
+        // Reset UI
         document.getElementById('gameOverlay').style.display = 'none';
         document.getElementById('gameMessage').textContent = '';
+        
+        // Spawn new shape and start game loop
         this.spawnShape();
         this.gameLoop();
     }
@@ -836,35 +922,86 @@ class Game {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
+    initPlatforms() {
+        // Add exactly 2 platforms in the top half of the screen
+        const screenHeight = this.canvas.height;
+        const topHalfHeight = screenHeight / 2;
+        
+        // Calculate valid height range (30% to 80% of top half)
+        const minHeight = topHalfHeight * 0.3;
+        const maxHeight = topHalfHeight * 0.8;
+        
+        for (let i = 0; i < 2; i++) {
+            // Position platforms at different heights within the valid range
+            const y = minHeight + (i * (maxHeight - minHeight));
+            const width = 30 + Math.random() * 20; // Narrower platforms (30-50px)
+            const x = Math.random() * (this.canvas.width - width);
+            const speed = 1.5 + Math.random() * 1; // Slightly slower speed
+            const direction = Math.random() < 0.5 ? -1 : 1;
+            
+            // Create platform with thinner height (8px)
+            this.platforms.push(new Platform(x, y, width, 8, speed, direction));
+        }
+    }
+
     update() {
         if (this.gameOver) return;
 
         const currentTime = Date.now();
 
-        // Update background wave
-        this.backgroundOffset += this.backgroundWaveSpeed;
+        // Update platforms
+        this.platforms.forEach(platform => platform.update());
 
-        // Update clouds
-        this.clouds.forEach((cloud, index) => {
-            cloud.x += cloud.speed;
-            if ((cloud.speed > 0 && cloud.x > this.canvas.width + 300) || 
-                (cloud.speed < 0 && cloud.x < -300)) {
-                this.clouds.splice(index, 1);
-                this.createCloud();
-            }
-        });
-
-        // Update fish
-        this.fish.forEach((fish, index) => {
-            fish.x += fish.speed;
-            fish.jumpProgress += 0.02;
-            if (fish.jumpProgress >= 1) {
-                this.fish.splice(index, 1);
-            }
-        });
-
-        // Update current shape
+        // Update current shape with physics
         if (this.currentShape) {
+            // Apply gravity
+            this.currentShape.velocityY += this.currentShape.gravity;
+            
+            // Apply friction
+            this.currentShape.velocityX *= this.currentShape.friction;
+            
+            // Update position
+            this.currentShape.x += this.currentShape.velocityX;
+            this.currentShape.y += this.currentShape.velocityY;
+            
+            // Check platform collisions
+            this.currentShape.isOnPlatform = false;
+            for (const platform of this.platforms) {
+                if (platform.checkCollision(this.currentShape)) {
+                    break;
+                }
+            }
+
+            // Update rotation and trail
+            this.currentShape.rotation += this.currentShape.rotationSpeed;
+            this.currentShape.trail.push({ x: this.currentShape.x, y: this.currentShape.y, rotation: this.currentShape.rotation });
+            if (this.currentShape.trail.length > this.currentShape.maxTrailLength) {
+                this.currentShape.trail.shift();
+            }
+            
+            // Update background wave
+            this.backgroundOffset += this.backgroundWaveSpeed;
+
+            // Update clouds
+            this.clouds.forEach((cloud, index) => {
+                cloud.x += cloud.speed;
+                if ((cloud.speed > 0 && cloud.x > this.canvas.width + 300) || 
+                    (cloud.speed < 0 && cloud.x < -300)) {
+                    this.clouds.splice(index, 1);
+                    this.createCloud();
+                }
+            });
+
+            // Update fish
+            this.fish.forEach((fish, index) => {
+                fish.x += fish.speed;
+                fish.jumpProgress += 0.02;
+                if (fish.jumpProgress >= 1) {
+                    this.fish.splice(index, 1);
+                }
+            });
+
+            // Update current shape
             this.currentShape.update();
             
             // Store collision data for debugging
@@ -947,6 +1084,9 @@ class Game {
 
         // Draw fish
         this.fish.forEach(fish => this.drawFish(fish));
+
+        // Draw platforms
+        this.platforms.forEach(platform => platform.draw(this.ctx));
 
         // Draw current shape
         if (this.currentShape) {
@@ -1154,7 +1294,7 @@ class Game {
     gameLoop() {
         this.update();
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        this.gameLoopId = requestAnimationFrame(() => this.gameLoop());
     }
 }
 
