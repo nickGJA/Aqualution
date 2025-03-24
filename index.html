@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="A fun shape-matching game where you control a wheel with different shaped holes and try to match falling shapes.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Shape Matcher</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-overlay" id="gameOverlay">
+            <div class="game-message">
+                <h2 id="gameMessage">Game Over!</h2>
+                <button id="restartButton">Play Again</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html> 

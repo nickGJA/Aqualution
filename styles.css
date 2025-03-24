@@ -1,0 +1,91 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: none;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+.game-container {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    height: 100vh;
+    max-height: 600px;
+    margin: 0 auto;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    z-index: 1000;
+}
+
+.game-message {
+    text-align: center;
+    color: white;
+    padding: 20px;
+}
+
+.game-message h2 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#restartButton {
+    padding: 12px 30px;
+    font-size: 1.2em;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#restartButton:hover {
+    background: #45a049;
+}
+
+@media (max-width: 600px) {
+    .game-container {
+        height: 100vh;
+        max-height: none;
+    }
+
+    .game-message h2 {
+        font-size: 2em;
+    }
+
+    #restartButton {
+        padding: 15px 40px;
+        font-size: 1.4em;
+    }
+} 
