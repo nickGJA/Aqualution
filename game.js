@@ -578,7 +578,7 @@ class Wheel {
         const localY = y - this.y;
         
         // Increase touch target size for mobile
-        const touchTargetSize = this.pauseButtonSize * 1.5; // 50% larger touch target
+        const touchTargetSize = this.pauseButtonSize * 2; // Doubled touch target size
         
         // Check if click/touch is within expanded pause button bounds
         if (Math.abs(localX - this.pauseButtonX) < touchTargetSize/2 &&
@@ -598,8 +598,8 @@ class Wheel {
                         Math.pow(localY - this.touchStartY, 2)
                     );
                     
-                    // Only trigger if touch was held for at least 100ms and didn't move much
-                    if (touchDuration >= 100 && touchDistance < 10) {
+                    // Only trigger if touch was held for at least 50ms and didn't move much
+                    if (touchDuration >= 50 && touchDistance < 20) {
                         this.isPaused = !this.isPaused;
                         this.isButtonPressed = true;
                         setTimeout(() => {
@@ -611,7 +611,7 @@ class Wheel {
                     this.touchStartTime = 0;
                     this.touchStartX = 0;
                     this.touchStartY = 0;
-                }, 150);
+                }, 100);
             }
             
             return true;
@@ -1317,13 +1317,13 @@ class Game {
         const startHeight = this.canvas.height * 0.05;
         
         // Calculate height step for each row
-        const heightStep = (this.canvas.height * 0.4) / 3; // Use 40% of screen height for 4 rows
+        const heightStep = (this.canvas.height * 0.4) / 3; // Use 40% of screen height for 3 rows
         
         // Calculate the right offset to ensure equal spacing from right edge
         const rightOffset = this.canvas.width * 0.1; // 10% from right edge
         
-        // Create 4 rows of pins with increasing number of pins per row
-        for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+        // Create 3 rows of pins (removed first row)
+        for (let rowIndex = 0; rowIndex < 3; rowIndex++) {
             const height = startHeight + (rowIndex * heightStep);
             const numPins = rowIndex + 1;
             
@@ -1383,6 +1383,15 @@ class Game {
             // Update position
             this.currentShape.x += this.currentShape.velocityX;
             this.currentShape.y += this.currentShape.velocityY;
+            
+            // Add edge bouncing
+            if (this.currentShape.x - this.currentShape.size/2 < 0) {
+                this.currentShape.x = this.currentShape.size/2;
+                this.currentShape.velocityX = Math.abs(this.currentShape.velocityX) * this.currentShape.bounce;
+            } else if (this.currentShape.x + this.currentShape.size/2 > this.canvas.width) {
+                this.currentShape.x = this.canvas.width - this.currentShape.size/2;
+                this.currentShape.velocityX = -Math.abs(this.currentShape.velocityX) * this.currentShape.bounce;
+            }
             
             // Check pin collisions
             this.pins.forEach(pin => {
