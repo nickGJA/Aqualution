@@ -4,8 +4,8 @@ class Shape {
         this.x = x;
         this.y = y;
         this.size = 30;
-        this.normalSpeed = 0.8;
-        this.fastSpeed = 3.2;
+        this.normalSpeed = 0.5;
+        this.fastSpeed = 2.0;
         this.rotation = 0;
         this.rotationSpeed = 0.02;
         this.isMatched = false;
@@ -383,6 +383,12 @@ class Wheel {
         this.buttonPressScale = 1;
         this.buttonPressAnimationSpeed = 0.2;
         
+        // Add touch-specific properties
+        this.touchStartTime = 0;
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchTimeout = null;
+        
         // Map each hole type to its console logged name for debugging
         this.holeTypeMap = {};
         this.holes.forEach(hole => {
@@ -571,17 +577,54 @@ class Wheel {
         const localX = x - this.x;
         const localY = y - this.y;
         
-        // Check if click is within pause button bounds
-        if (Math.abs(localX - this.pauseButtonX) < this.pauseButtonSize/2 &&
-            Math.abs(localY - this.pauseButtonY) < this.pauseButtonSize/2) {
-            this.isPaused = !this.isPaused;
-            this.isButtonPressed = true;
-            // Reset button press after animation
-            setTimeout(() => {
-                this.isButtonPressed = false;
-            }, 200);
+        // Increase touch target size for mobile
+        const touchTargetSize = this.pauseButtonSize * 1.5; // 50% larger touch target
+        
+        // Check if click/touch is within expanded pause button bounds
+        if (Math.abs(localX - this.pauseButtonX) < touchTargetSize/2 &&
+            Math.abs(localY - this.pauseButtonY) < touchTargetSize/2) {
+            
+            // For touch events, add a small delay to prevent accidental pauses
+            if (this.touchStartTime === 0) {
+                this.touchStartTime = Date.now();
+                this.touchStartX = localX;
+                this.touchStartY = localY;
+                
+                // Set a timeout to check if this is a valid touch
+                this.touchTimeout = setTimeout(() => {
+                    const touchDuration = Date.now() - this.touchStartTime;
+                    const touchDistance = Math.sqrt(
+                        Math.pow(localX - this.touchStartX, 2) + 
+                        Math.pow(localY - this.touchStartY, 2)
+                    );
+                    
+                    // Only trigger if touch was held for at least 100ms and didn't move much
+                    if (touchDuration >= 100 && touchDistance < 10) {
+                        this.isPaused = !this.isPaused;
+                        this.isButtonPressed = true;
+                        setTimeout(() => {
+                            this.isButtonPressed = false;
+                        }, 200);
+                    }
+                    
+                    // Reset touch state
+                    this.touchStartTime = 0;
+                    this.touchStartX = 0;
+                    this.touchStartY = 0;
+                }, 150);
+            }
+            
             return true;
         }
+        
+        // Reset touch state if touch moves outside button
+        if (this.touchStartTime !== 0) {
+            clearTimeout(this.touchTimeout);
+            this.touchStartTime = 0;
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+        }
+        
         return false;
     }
 }
@@ -702,6 +745,116 @@ class Pin {
     }
 }
 
+class Flipper {
+    constructor(x, y, isLeft) {
+        this.x = x;
+        this.y = y;
+        this.isLeft = isLeft;
+        this.length = 100; // Length of the flipper
+        this.width = 20; // Width of the flipper
+        // Add 180 degrees (Math.PI) to the left flipper's angles
+        this.angle = isLeft ? Math.PI/4 + Math.PI : -Math.PI/4; // Initial angle
+        this.targetAngle = isLeft ? Math.PI/4 + Math.PI : -Math.PI/4;
+        this.rotationSpeed = 0.3; // Speed of rotation
+        // Center the rotation point
+        this.rotationPoint = { x: this.x + (isLeft ? this.length/2 : -this.length/2), y: this.y };
+        this.isActive = false;
+        this.color = '#FFD700'; // Gold color for flippers
+        this.borderColor = '#B8860B'; // Darker gold for border
+    }
+
+    update() {
+        // Smoothly rotate to target angle
+        const angleDiff = this.targetAngle - this.angle;
+        this.angle += angleDiff * this.rotationSpeed;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.rotationPoint.x, this.rotationPoint.y);
+        ctx.rotate(this.angle);
+        
+        // Draw flipper body
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = this.borderColor;
+        ctx.lineWidth = 2;
+        
+        // Draw main flipper body centered around rotation point
+        ctx.beginPath();
+        ctx.moveTo(-this.length/2, -this.width/2);
+        ctx.lineTo(this.length/2, -this.width/2);
+        ctx.lineTo(this.length/2, this.width/2);
+        ctx.lineTo(-this.length/2, this.width/2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw flipper tip
+        ctx.beginPath();
+        ctx.moveTo(this.length/2 - 10, -this.width/2);
+        ctx.lineTo(this.length/2 + 10, 0);
+        ctx.lineTo(this.length/2 - 10, this.width/2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+
+    activate() {
+        this.isActive = true;
+        // Add 180 degrees to the left flipper's target angle
+        this.targetAngle = this.isLeft ? Math.PI/6 + Math.PI : -Math.PI/6; // Rotate inward
+    }
+
+    deactivate() {
+        this.isActive = false;
+        // Add 180 degrees to the left flipper's return angle
+        this.targetAngle = this.isLeft ? Math.PI/4 + Math.PI : -Math.PI/4; // Return to original position
+    }
+
+    checkCollision(shape) {
+        // Convert shape position to flipper's local space
+        const dx = shape.x - this.rotationPoint.x;
+        const dy = shape.y - this.rotationPoint.y;
+        
+        // Rotate point to flipper's local space
+        const rotatedX = dx * Math.cos(-this.angle) - dy * Math.sin(-this.angle);
+        const rotatedY = dx * Math.sin(-this.angle) + dy * Math.cos(-this.angle);
+        
+        // Check if shape is within flipper bounds
+        if (rotatedX >= 0 && rotatedX <= this.length + 10 && 
+            Math.abs(rotatedY) <= this.width/2 + shape.size/2) {
+            
+            // Calculate collision normal
+            const normalX = Math.cos(this.angle);
+            const normalY = Math.sin(this.angle);
+            
+            // Calculate relative velocity
+            const relativeVelocityX = shape.velocityX;
+            const relativeVelocityY = shape.velocityY;
+            
+            // Calculate impulse
+            const impulse = -(1 + shape.bounce) * (relativeVelocityX * normalX + relativeVelocityY * normalY);
+            
+            // Apply impulse
+            shape.velocityX += impulse * normalX;
+            shape.velocityY += impulse * normalY;
+            
+            // Add upward boost
+            shape.velocityY -= 5;
+            
+            // Move shape out of collision
+            const overlap = (this.width/2 + shape.size/2 - Math.abs(rotatedY)) * 1.5;
+            shape.x += normalX * overlap;
+            shape.y += normalY * overlap;
+            
+            return true;
+        }
+        return false;
+    }
+}
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -718,8 +871,8 @@ class Game {
         this.backgroundImage = new Image();
         this.backgroundImage.src = 'Background.png';
         this.backgroundOffset = 0;
-        this.backgroundWaveAmplitude = 3;
-        this.backgroundWaveSpeed = 0.02;
+        this.backgroundWaveAmplitude = 8; // Increased from 3 to 8 for more pronounced movement
+        this.backgroundWaveSpeed = 0.03; // Increased from 0.02 to 0.03 for slightly faster waves
         
         // Initialize clouds
         this.clouds = [];
@@ -764,6 +917,10 @@ class Game {
         // Add pins array
         this.pins = [];
         this.initPins();
+
+        // Add flippers
+        this.flippers = [];
+        this.initFlippers();
     }
 
     resizeCanvas() {
@@ -802,6 +959,9 @@ class Game {
                 if (this.currentShape) {
                     this.currentShape.setSpeed(true);
                 }
+            } else if (e.key === 'ArrowUp') { // Up arrow key activates both flippers
+                this.flippers[0].activate();
+                this.flippers[1].activate();
             }
         });
 
@@ -811,6 +971,9 @@ class Game {
                 if (this.currentShape) {
                     this.currentShape.setSpeed(false);
                 }
+            } else if (e.key === 'ArrowUp') { // Deactivate both flippers when up arrow is released
+                this.flippers[0].deactivate();
+                this.flippers[1].deactivate();
             }
         });
 
@@ -834,6 +997,29 @@ class Game {
                         this.currentShape.setSpeed(true);
                         this.sounds.shapeFall.play();
                     }
+                } else {
+                    // Check if touch is on a flipper
+                    const leftFlipper = this.flippers[0];
+                    const rightFlipper = this.flippers[1];
+                    
+                    // Calculate touch position relative to flippers
+                    const leftFlipperX = leftFlipper.rotationPoint.x;
+                    const rightFlipperX = rightFlipper.rotationPoint.x;
+                    const flipperY = leftFlipper.rotationPoint.y;
+                    
+                    // Define touch area for flippers (make it larger for easier touch)
+                    const touchArea = 100; // Increased touch area
+                    
+                    // Check if touch is near left flipper
+                    if (Math.abs(touchX - leftFlipperX) < touchArea && 
+                        Math.abs(touchY - flipperY) < touchArea) {
+                        leftFlipper.activate();
+                    }
+                    // Check if touch is near right flipper
+                    else if (Math.abs(touchX - rightFlipperX) < touchArea && 
+                             Math.abs(touchY - flipperY) < touchArea) {
+                        rightFlipper.activate();
+                    }
                 }
                 this.touchStartX = touchX;
             }
@@ -855,6 +1041,8 @@ class Game {
             if (this.currentShape) {
                 this.currentShape.setSpeed(false);
             }
+            // Deactivate both flippers
+            this.flippers.forEach(flipper => flipper.deactivate());
         });
 
         this.canvas.addEventListener('touchmove', (e) => {
@@ -952,9 +1140,9 @@ class Game {
         const y = 0;
         
         this.currentShape = new Shape(type, x, y);
-        // Apply 35% faster speed
-        this.currentShape.normalSpeed = 1.35;
-        this.currentShape.fastSpeed = 5.4;
+        // Apply 35% faster speed (reduced from original)
+        this.currentShape.normalSpeed = 0.85; // Reduced from 1.35
+        this.currentShape.fastSpeed = 3.4; // Reduced from 5.4
         this.currentShape.setSpeed(this.isSpeedBoosted);
     }
 
@@ -995,7 +1183,12 @@ class Game {
             speed: (2 + Math.random() * 2) * direction,
             jumpHeight: 50 + Math.random() * 50,
             jumpProgress: 0,
-            color: `hsl(${Math.random() * 360}, 70%, 50%)`
+            color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+            // Add physics properties for collision only
+            velocityX: 0,
+            velocityY: 0,
+            bounce: 0.7,
+            friction: 0.98
         };
         this.fish.push(fish);
         this.createSplash(fish.x, fish.y);
@@ -1124,18 +1317,18 @@ class Game {
         const startHeight = this.canvas.height * 0.05;
         
         // Calculate height step for each row
-        const heightStep = (this.canvas.height * 0.4) / 4; // Use 40% of screen height for 5 rows
+        const heightStep = (this.canvas.height * 0.4) / 3; // Use 40% of screen height for 4 rows
         
         // Calculate the right offset to ensure equal spacing from right edge
         const rightOffset = this.canvas.width * 0.1; // 10% from right edge
         
-        // Create 5 rows of pins with increasing number of pins per row
-        for (let rowIndex = 0; rowIndex < 5; rowIndex++) {
+        // Create 4 rows of pins with increasing number of pins per row
+        for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
             const height = startHeight + (rowIndex * heightStep);
             const numPins = rowIndex + 1;
             
-            // Calculate total width for this row
-            const totalWidth = this.canvas.width * (0.2 + (rowIndex * 0.15)); // Increase width for each row
+            // Calculate total width for this row with increased spacing
+            const totalWidth = this.canvas.width * (0.3 + (rowIndex * 0.2)); // Increased from 0.2/0.15 to 0.3/0.2
             const pinSpacing = totalWidth / (numPins + 1);
             
             // Calculate starting X position to center the pins, shifted right
@@ -1149,6 +1342,25 @@ class Game {
         }
     }
 
+    initFlippers() {
+        // Position flippers on either side of the wheel
+        const wheelX = this.canvas.width / 2;
+        const wheelY = this.canvas.height - 150;
+        const flipperY = wheelY + 20; // Base flipper Y position
+        const heightAdjustment = flipperY * 0.25; // 25% height adjustment
+        
+        // Calculate the offsets to ensure 5% spacing from both edges
+        const leftOffset = this.canvas.width * 0.05; // 5% from left edge
+        const rightOffset = this.canvas.width * 0.95; // 5% from right edge
+        
+        // Create both flippers at their respective positions
+        this.flippers = []; // Clear existing flippers
+        // Left flipper (5% from left edge, raised by 25%)
+        this.flippers.push(new Flipper(leftOffset, flipperY - heightAdjustment, true));
+        // Right flipper (5% from right edge, raised by 25%)
+        this.flippers.push(new Flipper(rightOffset, flipperY - heightAdjustment, false));
+    }
+
     update() {
         if (this.gameOver || this.wheel.isPaused) return;
 
@@ -1156,6 +1368,9 @@ class Game {
 
         // Update platforms
         this.platforms.forEach(platform => platform.update());
+
+        // Update flippers
+        this.flippers.forEach(flipper => flipper.update());
 
         // Update current shape with physics
         if (this.currentShape) {
@@ -1182,6 +1397,50 @@ class Game {
                 }
             }
 
+            // Check fish collisions
+            this.fish.forEach((fish, index) => {
+                const dx = this.currentShape.x - fish.x;
+                const dy = this.currentShape.y - fish.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < (fish.size + this.currentShape.size) / 2) {
+                    // Calculate collision normal
+                    const nx = dx / distance;
+                    const ny = dy / distance;
+                    
+                    // Calculate relative velocity
+                    const relativeVelocityX = this.currentShape.velocityX - fish.velocityX;
+                    const relativeVelocityY = this.currentShape.velocityY - fish.velocityY;
+                    
+                    // Calculate impulse
+                    const impulse = -(1 + this.currentShape.bounce) * 
+                        (relativeVelocityX * nx + relativeVelocityY * ny);
+                    
+                    // Apply impulse to shape
+                    this.currentShape.velocityX += impulse * nx;
+                    this.currentShape.velocityY += impulse * ny;
+                    
+                    // Apply impulse to fish
+                    fish.velocityX -= impulse * nx;
+                    fish.velocityY -= impulse * ny;
+                    
+                    // Move objects out of collision
+                    const overlap = ((fish.size + this.currentShape.size) / 2 - distance) * 1.5;
+                    this.currentShape.x += nx * overlap;
+                    this.currentShape.y += ny * overlap;
+                    fish.x -= nx * overlap;
+                    fish.y -= ny * overlap;
+                    
+                    // Add some randomness to fish movement after collision
+                    fish.velocityX += (Math.random() - 0.5) * 2;
+                    fish.velocityY += (Math.random() - 0.5) * 2;
+                    
+                    // Apply friction to fish
+                    fish.velocityX *= fish.friction;
+                    fish.velocityY *= fish.friction;
+                }
+            });
+
             // Update rotation and trail
             this.currentShape.rotation += this.currentShape.rotationSpeed;
             this.currentShape.trail.push({ x: this.currentShape.x, y: this.currentShape.y, rotation: this.currentShape.rotation });
@@ -1202,11 +1461,16 @@ class Game {
                 }
             });
 
-            // Update fish
+            // Update fish without gravity
             this.fish.forEach((fish, index) => {
+                // Update position with original speed and jump animation
                 fish.x += fish.speed;
                 fish.jumpProgress += 0.02;
-                if (fish.jumpProgress >= 1) {
+                
+                // Remove fish if it goes off screen or completes jump
+                if (fish.jumpProgress >= 1 || 
+                    fish.x < -100 || 
+                    fish.x > this.canvas.width + 100) {
                     this.fish.splice(index, 1);
                 }
             });
@@ -1251,6 +1515,11 @@ class Game {
                 document.getElementById('gameOverlay').style.display = 'flex';
                 return;
             }
+
+            // Check flipper collisions
+            this.flippers.forEach(flipper => {
+                flipper.checkCollision(this.currentShape);
+            });
         }
 
         // Spawn new shape after interval if no shape exists
@@ -1273,7 +1542,7 @@ class Game {
         // Draw background with wave effect
         if (this.backgroundImage.complete) {
             const waveOffset = Math.sin(this.backgroundOffset) * this.backgroundWaveAmplitude;
-            const scale = 1.05; // Scale up by 5% to prevent black edges
+            const scale = 1.1; // Increased from 1.05 to 1.1 to prevent black edges with larger wave
             const scaledWidth = this.canvas.width * scale;
             const scaledHeight = this.canvas.height * scale;
             const offsetX = (scaledWidth - this.canvas.width) / 2;
@@ -1511,6 +1780,9 @@ class Game {
 
         // Draw screen fade
         this.drawScreenFade();
+
+        // Draw flippers
+        this.flippers.forEach(flipper => flipper.draw(this.ctx));
 
         if (this.gameOver) {
             document.getElementById('gameOverlay').style.display = 'flex';
