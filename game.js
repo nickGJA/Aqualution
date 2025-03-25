@@ -60,7 +60,7 @@ class Shape {
             ctx.shadowOffsetY = 0;
             
             // Draw trail shape
-            this.drawShape(ctx, this.size * 0.9);
+            this.drawShapeOutline(ctx, this.size * 0.9);
             ctx.restore();
         });
 
@@ -373,6 +373,16 @@ class Wheel {
         this.splashParticles = [];
         this.maxSplashParticles = 20;
         
+        // Add pause button properties - make it 3 times bigger
+        this.pauseButtonSize = this.radius * 0.45; // Increased from 0.15 to 0.45
+        this.pauseButtonX = 0;
+        this.pauseButtonY = 0;
+        this.isPaused = false;
+        // Add pressed state properties
+        this.isButtonPressed = false;
+        this.buttonPressScale = 1;
+        this.buttonPressAnimationSpeed = 0.2;
+        
         // Map each hole type to its console logged name for debugging
         this.holeTypeMap = {};
         this.holes.forEach(hole => {
@@ -406,6 +416,41 @@ class Wheel {
                 color: 'rgba(255, 255, 255, 0.3)'
             });
         }
+    }
+
+    drawPauseButton(ctx) {
+        ctx.save();
+        ctx.translate(this.pauseButtonX, this.pauseButtonY);
+        
+        // Update button press animation
+        if (this.isButtonPressed) {
+            this.buttonPressScale = Math.max(0.9, this.buttonPressScale - this.buttonPressAnimationSpeed);
+        } else {
+            this.buttonPressScale = Math.min(1, this.buttonPressScale + this.buttonPressAnimationSpeed);
+        }
+        
+        // Apply scale transform
+        ctx.scale(this.buttonPressScale, this.buttonPressScale);
+        
+        // Draw circular brown outline
+        ctx.strokeStyle = '#4A2F1C'; // Darker brown color
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.pauseButtonSize/2, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Draw black vertical lines
+        ctx.fillStyle = 'black';
+        const lineWidth = this.pauseButtonSize * 0.15;
+        const lineHeight = this.pauseButtonSize * 0.6;
+        const gap = this.pauseButtonSize * 0.2;
+        
+        // Left line
+        ctx.fillRect(-gap/2 - lineWidth/2, -lineHeight/2, lineWidth, lineHeight);
+        // Right line
+        ctx.fillRect(gap/2 - lineWidth/2, -lineHeight/2, lineWidth, lineHeight);
+        
+        ctx.restore();
     }
 
     draw(ctx) {
@@ -442,6 +487,9 @@ class Wheel {
                 this.radius * 2
             );
         }
+
+        // Draw pause button
+        this.drawPauseButton(ctx);
 
         // Draw splash particles
         this.splashParticles.forEach((particle, index) => {
@@ -517,6 +565,25 @@ class Wheel {
     isComplete() {
         return this.filledHoles.size === this.holes.length;
     }
+
+    checkPauseButtonClick(x, y) {
+        // Convert click coordinates to wheel's local space
+        const localX = x - this.x;
+        const localY = y - this.y;
+        
+        // Check if click is within pause button bounds
+        if (Math.abs(localX - this.pauseButtonX) < this.pauseButtonSize/2 &&
+            Math.abs(localY - this.pauseButtonY) < this.pauseButtonSize/2) {
+            this.isPaused = !this.isPaused;
+            this.isButtonPressed = true;
+            // Reset button press after animation
+            setTimeout(() => {
+                this.isButtonPressed = false;
+            }, 200);
+            return true;
+        }
+        return false;
+    }
 }
 
 class Platform {
@@ -566,6 +633,70 @@ class Platform {
                 shape.isOnPlatform = true;
                 return true;
             }
+        }
+        return false;
+    }
+}
+
+class Pin {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 5;
+        this.color = '#8B4513';
+        // Add force properties
+        this.force = 2.0; // Base force to apply
+        this.randomForce = 1.0; // Additional random force
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.strokeStyle = '#4A2F1C';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    checkCollision(shape) {
+        const dx = shape.x - this.x;
+        const dy = shape.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < this.radius + shape.size/2) {
+            // Calculate collision normal
+            const nx = dx / distance;
+            const ny = dy / distance;
+            
+            // Apply bounce and friction
+            const relativeVelocityX = shape.velocityX;
+            const relativeVelocityY = shape.velocityY;
+            
+            // Calculate impulse
+            const impulse = -(1 + shape.bounce) * (relativeVelocityX * nx + relativeVelocityY * ny);
+            
+            // Apply impulse
+            shape.velocityX += impulse * nx;
+            shape.velocityY += impulse * ny;
+            
+            // Apply friction
+            shape.velocityX *= shape.friction;
+            shape.velocityY *= shape.friction;
+            
+            // Add random directional force
+            const direction = Math.random() < 0.5 ? -1 : 1; // Randomly choose left or right
+            const randomForce = this.force + (Math.random() * this.randomForce);
+            shape.velocityX += direction * randomForce;
+            
+            // Move shape out of collision
+            const overlap = (this.radius + shape.size/2 - distance) * 1.5;
+            shape.x += nx * overlap;
+            shape.y += ny * overlap;
+            
+            return true;
         }
         return false;
     }
@@ -629,6 +760,10 @@ class Game {
         this.setupEventListeners();
         this.lockOrientation();
         this.startGame();
+
+        // Add pins array
+        this.pins = [];
+        this.initPins();
     }
 
     resizeCanvas() {
@@ -683,7 +818,15 @@ class Game {
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameOver) {
-                const touchY = e.touches[0].clientY;
+                const touch = e.touches[0];
+                const touchX = touch.clientX;
+                const touchY = touch.clientY;
+                
+                // Check for pause button click
+                if (this.wheel.checkPauseButtonClick(touchX, touchY)) {
+                    return;
+                }
+                
                 // Only boost speed if touching in top half of screen
                 if (touchY < this.canvas.height / 2) {
                     this.isSpeedBoosted = true;
@@ -692,7 +835,17 @@ class Game {
                         this.sounds.shapeFall.play();
                     }
                 }
-                this.touchStartX = e.touches[0].clientX;
+                this.touchStartX = touchX;
+            }
+        });
+
+        // Add click event listener for pause button
+        this.canvas.addEventListener('click', (e) => {
+            if (!this.gameOver) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                this.wheel.checkPauseButtonClick(x, y);
             }
         });
 
@@ -760,6 +913,10 @@ class Game {
         // Reset UI
         document.getElementById('gameOverlay').style.display = 'none';
         document.getElementById('gameMessage').textContent = '';
+        
+        // Reset pins
+        this.pins = [];
+        this.initPins();
         
         // Spawn new shape and start game loop
         this.spawnShape();
@@ -962,8 +1119,38 @@ class Game {
         }
     }
 
+    initPins() {
+        // Calculate starting height at 5% from top of screen
+        const startHeight = this.canvas.height * 0.05;
+        
+        // Calculate height step for each row
+        const heightStep = (this.canvas.height * 0.4) / 4; // Use 40% of screen height for 5 rows
+        
+        // Calculate the right offset to ensure equal spacing from right edge
+        const rightOffset = this.canvas.width * 0.1; // 10% from right edge
+        
+        // Create 5 rows of pins with increasing number of pins per row
+        for (let rowIndex = 0; rowIndex < 5; rowIndex++) {
+            const height = startHeight + (rowIndex * heightStep);
+            const numPins = rowIndex + 1;
+            
+            // Calculate total width for this row
+            const totalWidth = this.canvas.width * (0.2 + (rowIndex * 0.15)); // Increase width for each row
+            const pinSpacing = totalWidth / (numPins + 1);
+            
+            // Calculate starting X position to center the pins, shifted right
+            const startX = (this.canvas.width - (numPins * pinSpacing)) / 2 + rightOffset;
+            
+            // Create pins for this row
+            for (let i = 0; i < numPins; i++) {
+                const x = startX + (i * pinSpacing);
+                this.pins.push(new Pin(x, height));
+            }
+        }
+    }
+
     update() {
-        if (this.gameOver) return;
+        if (this.gameOver || this.wheel.isPaused) return;
 
         const currentTime = Date.now();
 
@@ -981,6 +1168,11 @@ class Game {
             // Update position
             this.currentShape.x += this.currentShape.velocityX;
             this.currentShape.y += this.currentShape.velocityY;
+            
+            // Check pin collisions
+            this.pins.forEach(pin => {
+                pin.checkCollision(this.currentShape);
+            });
             
             // Check platform collisions
             this.currentShape.isOnPlatform = false;
@@ -1105,6 +1297,9 @@ class Game {
 
         // Draw platforms
         this.platforms.forEach(platform => platform.draw(this.ctx));
+
+        // Draw pins before drawing the current shape
+        this.pins.forEach(pin => pin.draw(this.ctx));
 
         // Draw current shape
         if (this.currentShape) {
@@ -1300,6 +1495,19 @@ class Game {
         this.ctx.strokeText(`Level ${this.level}`, this.canvas.width - 20, 40);
         this.ctx.fillText(`Level ${this.level}`, this.canvas.width - 20, 40);
         this.ctx.textAlign = 'left';
+
+        // Draw pause text if game is paused
+        if (this.wheel.isPaused) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = 'bold 48px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.strokeStyle = 'black';
+            this.ctx.lineWidth = 4;
+            this.ctx.strokeText('PAUSED', this.canvas.width/2, this.canvas.height/2);
+            this.ctx.fillText('PAUSED', this.canvas.width/2, this.canvas.height/2);
+        }
 
         // Draw screen fade
         this.drawScreenFade();
